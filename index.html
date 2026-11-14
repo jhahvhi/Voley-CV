@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vóley CV · clasificación y partidos</title>
+<meta name="description" content="Clasificación y calendario de cualquier equipo de la Federación de Voleibol de la Comunidad Valenciana, sin complicaciones.">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏐</text></svg>">
+<style>
+:root {
+  --fondo: #f3f5f9; --tarjeta: #fff; --texto: #131a26; --suave: #5b6676; --borde: #dde2ea;
+  --acento: #1d4ed8; --acento-suave: #e4ecff; --sobre-acento: #fff;
+  --gana: #15803d; --gana-suave: #dcfce7; --pierde: #b91c1c; --pierde-suave: #fee2e2;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0e131b; --tarjeta: #171e2a; --texto: #e8ecf3; --suave: #98a3b5; --borde: #2a3445;
+    --acento: #7aa2ff; --acento-suave: #1c2a4d; --sobre-acento: #0b1220;
+    --gana: #4ade80; --gana-suave: #12301f; --pierde: #f87171; --pierde-suave: #3a1717;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fondo); color: var(--texto);
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 6px 0 14px; }
+h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; color: var(--suave); margin: 0 0 10px; font-weight: 700; }
+.act { color: var(--suave); font-size: .8rem; }
+.tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+.oculto { display: none !important; }
+
+/* Selectores */
+.campos { display: grid; gap: 10px; grid-template-columns: 1fr; }
+@media (min-width: 620px) { .campos { grid-template-columns: 1fr 1.4fr 1.4fr; } }
+label { display: block; font-size: .78rem; font-weight: 600; color: var(--suave); margin-bottom: 4px; }
+select, input[type=search] { width: 100%; font: inherit; color: var(--texto); background: var(--fondo);
+  border: 1px solid var(--borde); border-radius: 10px; padding: 11px 12px; min-height: 46px; }
+select:disabled { opacity: .5; }
+select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
+.buscar { margin-top: 12px; position: relative; }
+.resultados { list-style: none; margin: 6px 0 0; padding: 0; max-height: 300px; overflow: auto; }
+.resultados button { display: block; width: 100%; text-align: left; font: inherit; color: var(--texto); background: none;
+  border: 0; border-top: 1px solid var(--borde); padding: 10px 4px; cursor: pointer; }
+.resultados button:hover { background: var(--acento-suave); }
+.resultados small { display: block; color: var(--suave); }
+
+/* Resumen */
+.resumen { display: flex; gap: 16px; align-items: center; }
+.puesto { flex: none; width: 92px; height: 92px; border-radius: 50%; background: var(--acento); color: var(--sobre-acento);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.puesto b { font-size: 2.3rem; font-weight: 800; }
+.puesto span { font-size: .75rem; margin-top: 4px; opacity: .9; }
+.resumen h3 { margin: 0 0 2px; font-size: 1.2rem; line-height: 1.2; overflow-wrap: anywhere; }
+.resumen p { margin: 0; color: var(--suave); font-size: .9rem; }
+.cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; text-align: center; }
+.cifras div { background: var(--fondo); border-radius: 10px; padding: 8px 4px; }
+.cifras b { display: block; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.cifras span { font-size: .72rem; color: var(--suave); }
+.proximo { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--borde); }
+.proximo strong { display: block; font-size: 1.05rem; overflow-wrap: anywhere; }
+.proximo .cuando { color: var(--acento); font-weight: 700; }
+.proximo a, .partido a { color: var(--suave); }
+
+/* Clasificación */
+.tabla-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 9px 6px; text-align: center; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+th { font-size: .72rem; color: var(--suave); font-weight: 700; }
+td.eq, th.eq { text-align: left; white-space: normal; width: 99%; overflow-wrap: anywhere; }
+td.eq img { width: 20px; height: 20px; object-fit: contain; vertical-align: -4px; margin-right: 6px; }
+td.pts { font-weight: 800; }
+tr.mio td { background: var(--acento-suave); font-weight: 700; }
+tr.mio td:first-child { box-shadow: inset 4px 0 0 var(--acento); }
+tbody tr[data-eq] { cursor: pointer; }
+tr:last-child td { border-bottom: 0; }
+.leyenda { color: var(--suave); font-size: .75rem; margin: 10px 0 0; }
+@media (max-width: 480px) { .extra { display: none; } }
+
+/* Calendario */
+.cab-cal { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.cab-cal h2 { margin: 0; }
+.conmuta { display: inline-flex; border: 1px solid var(--borde); border-radius: 999px; overflow: hidden; }
+.conmuta button { font: inherit; font-size: .8rem; padding: 6px 12px; border: 0; background: none; color: var(--suave); cursor: pointer; }
+.conmuta button[aria-pressed=true] { background: var(--acento); color: var(--sobre-acento); font-weight: 700; }
+.jornada { font-size: .75rem; font-weight: 700; color: var(--suave); margin: 16px 0 2px; text-transform: uppercase; letter-spacing: .05em; }
+.partido { display: grid; grid-template-columns: 88px 1fr auto; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--borde); }
+.partido:last-child { border-bottom: 0; }
+.partido.hoy { background: var(--acento-suave); margin: 0 -16px; padding: 11px 16px; }
+.partido .fecha { font-size: .82rem; color: var(--suave); line-height: 1.25; }
+.partido .fecha b { display: block; color: var(--texto); font-size: .92rem; }
+.partido .quien { min-width: 0; overflow-wrap: anywhere; }
+.partido .quien small { display: block; color: var(--suave); font-size: .78rem; }
+.partido .quien .yo { font-weight: 700; }
+.chip { display: inline-block; font-size: .68rem; font-weight: 700; border-radius: 5px; padding: 1px 5px; margin-right: 5px;
+  background: var(--fondo); color: var(--suave); border: 1px solid var(--borde); vertical-align: 1px; }
+.marcador { font-weight: 800; font-size: 1.05rem; border-radius: 8px; padding: 4px 9px; background: var(--fondo); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.marcador.g { background: var(--gana-suave); color: var(--gana); }
+.marcador.p { background: var(--pierde-suave); color: var(--pierde); }
+.marcador.pend { font-weight: 500; font-size: .8rem; color: var(--suave); }
+.aviso { color: var(--suave); text-align: center; padding: 22px 8px; }
+footer { color: var(--suave); font-size: .78rem; text-align: center; margin-top: 22px; }
+footer a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🏐 Vóley CV</h1>
+    <span class="act" id="act"></span>
+  </header>
+
+  <section class="tarjeta" aria-label="Elegir equipo">
+    <div class="campos">
+      <div><label for="s-cat">Categoría</label><select id="s-cat"></select></div>
+      <div><label for="s-comp">Competición</label><select id="s-comp" disabled></select></div>
+      <div><label for="s-eq">Equipo</label><select id="s-eq" disabled></select></div>
+    </div>
+    <div class="buscar">
+      <label for="q">…o busca el equipo por su nombre</label>
+      <input type="search" id="q" placeholder="Por ejemplo: Paterna" autocomplete="off">
+      <ul class="resultados" id="res"></ul>
+    </div>
+  </section>
+
+  <div id="contenido"><p class="aviso" id="aviso">Cargando datos…</p></div>
+
+  <footer>
+    Datos de la <a href="https://fvbcv.com/competiciones/" rel="noopener">Federación de Voleibol de la Comunidad Valenciana</a>.
+    Página no oficial; ante la duda, manda la web de la federación.
+  </footer>
+</main>
+
+<script>
+"use strict";
+const ESCUDOS = "https://appweb.fvbcv.com/backend/escudos/30/";
+const ORDEN_CAT = ["Alevín", "Infantil", "Cadete", "Juvenil", "Junior", "Senior", "Otras"];
+const $ = id => document.getElementById(id);
+const sCat = $("s-cat"), sComp = $("s-comp"), sEq = $("s-eq"), cont = $("contenido");
+let datos = null, verTodo = false;
+// Selección actual: competición (slug), índice de grupo y nombre de equipo.
+let sel = { c: "", g: -1, e: "" };
+
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const titulo = s => s.toLowerCase().replace(/(^|[\s.\-(/])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+const hoyISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const esDescanso = p => /^DESCANSA$/i.test(p.local) || /^DESCANSA$/i.test(p.visit);
+
+function fechaTxt(iso, largo) {
+  if (!iso) return "Sin fecha";
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("es-ES", largo
+    ? { weekday: "long", day: "numeric", month: "long" }
+    : { weekday: "short", day: "numeric", month: "short" });
+}
+const horaTxt = h => (!h || h === "00:00") ? "hora por confirmar" : h + " h";
+const escudo = f => (f && f !== "noescudo.png") ? `<img src="${ESCUDOS}${esc(f)}" alt="" loading="lazy" onerror="this.remove()">` : "";
+const mapa = campo => campo ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(campo)}" target="_blank" rel="noopener">📍 ${esc(campo)}</a>` : "";
+
+function opciones(select, lista, vacio) {
+  select.innerHTML = `<option value="">${vacio}</option>` + lista;
+  select.disabled = false;
+}
+
+function pintarCategorias() {
+  const cats = [...new Set(datos.competiciones.map(c => c.categoria))]
+    .sort((a, b) => ORDEN_CAT.indexOf(a) - ORDEN_CAT.indexOf(b));
+  opciones(sCat, cats.map(c => `<option>${esc(c)}</option>`).join(""), "Elige edad…");
+}
+
+function pintarCompeticiones() {
+  const lista = datos.competiciones.filter(c => c.categoria === sCat.value);
+  opciones(sComp, lista.map(c => `<option value="${esc(c.slug)}">${esc(titulo(c.nombre))}</option>`).join(""), "Elige competición…");
+  sComp.disabled = !sCat.value;
+  sEq.innerHTML = ""; sEq.disabled = true;
+}
+
+function equiposDe(g) {
+  const s = new Set(g.clasificacion.map(r => r.equipo));
+  g.partidos.forEach(p => { s.add(p.local); s.add(p.visit); });
+  s.delete("DESCANSA");
+  return [...s].sort((a, b) => a.localeCompare(b, "es"));
+}
+
+function pintarEquipos() {
+  const c = datos.competiciones.find(x => x.slug === sComp.value);
+  if (!c) { sEq.innerHTML = ""; sEq.disabled = true; return; }
+  const varios = c.grupos.length > 1;
+  const html = c.grupos.map((g, i) => {
+    const ops = equiposDe(g).map(e => `<option value="${i}|${esc(e)}">${esc(e)}</option>`).join("");
+    return varios ? `<optgroup label="${esc(nombreGrupo(g))}">${ops}</optgroup>` : ops;
+  }).join("");
+  opciones(sEq, html, "Elige equipo…");
+}
+
+function nombreGrupo(g) {
+  const partes = [g.fase, g.grupo].filter(x => x && !/^[ÚU]NICO$/i.test(x));
+  return partes.length ? titulo(partes.join(" · ")) : "Grupo único";
+}
+
+function elegir(slug, g, e, guardar = true) {
+  const c = datos.competiciones.find(x => x.slug === slug);
+  if (!c || !c.grupos[g]) return false;
+  sel = { c: slug, g, e };
+  sCat.value = c.categoria; pintarCompeticiones();
+  sComp.value = slug; pintarEquipos();
+  sEq.value = `${g}|${e}`;
+  if (guardar) {
+    const h = "#" + new URLSearchParams({ c: slug, g, e });
+    history.replaceState(null, "", h);
+    try { localStorage.setItem("voley-sel", h); } catch (_) {}
+  }
+  pintar();
+  return true;
+}
+
+function pintar() {
+  const c = datos.competiciones.find(x => x.slug === sel.c);
+  const g = c && c.grupos[sel.g];
+  if (!g || !sel.e) { cont.innerHTML = `<p class="aviso">Elige un equipo para ver cómo va.</p>`; return; }
+  const yo = sel.e, hoy = hoyISO();
+  const fila = g.clasificacion.find(r => r.equipo === yo);
+  const mios = g.partidos.filter(p => p.local === yo || p.visit === yo)
+    .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+  const prox = mios.find(p => p.sl === null && !esDescanso(p) && p.fecha >= hoy);
+
+  let h = `<section class="tarjeta"><div class="resumen">`;
+  if (fila) h += `<div class="puesto"><b>${fila.pos}º</b><span>de ${g.clasificacion.length}</span></div>`;
+  h += `<div><h3>${esc(yo)}</h3><p>${esc(titulo(c.nombre))}<br>${esc(nombreGrupo(g))}${c.temporada ? " · " + esc(c.temporada) : ""}</p></div></div>`;
+  if (fila) {
+    h += `<div class="cifras">
+      <div><b>${fila.pts}</b><span>puntos</span></div>
+      <div><b>${fila.pj}</b><span>jugados</span></div>
+      <div><b>${fila.pg3 + fila.pg2}</b><span>ganados</span></div>
+      <div><b>${fila.pp1 + fila.pp0}</b><span>perdidos</span></div></div>`;
+  }
+  if (prox) {
+    const casa = prox.local === yo, rival = casa ? prox.visit : prox.local;
+    const cuando = prox.fecha === hoy ? "Hoy" : fechaTxt(prox.fecha, true);
+    h += `<div class="proximo"><h2>Próximo partido</h2>
+      <span class="cuando">${esc(cuando)} · ${esc(horaTxt(prox.hora))}</span>
+      <strong>${casa ? "En casa contra" : "Fuera, contra"} ${esc(rival)}</strong>${mapa(prox.campo)}</div>`;
+  } else if (mios.length) {
+    h += `<div class="proximo"><h2>Próximo partido</h2><span>No hay más partidos programados.</span></div>`;
+  }
+  h += `</section>`;
+
+  if (g.clasificacion.length) {
+    h += `<section class="tarjeta"><h2>Clasificación · ${esc(nombreGrupo(g))}</h2><div class="tabla-scroll"><table>
+      <thead><tr><th></th><th class="eq">Equipo</th><th title="Partidos jugados">PJ</th><th title="Ganados">G</th><th title="Perdidos">P</th>
+      <th title="Sets a favor y en contra">Sets</th><th class="extra" title="Puntos de juego a favor y en contra">Tantos</th><th title="Puntos">Pts</th></tr></thead><tbody>`;
+    for (const r of g.clasificacion) {
+      h += `<tr data-eq="${esc(r.equipo)}" class="${r.equipo === yo ? "mio" : ""}"><td>${r.pos}</td><td class="eq">${escudo(r.escudo)}${esc(r.equipo)}</td>
+        <td>${r.pj}</td><td>${r.pg3 + r.pg2}</td><td>${r.pp1 + r.pp0}</td><td>${r.sf}-${r.sc}</td><td class="extra">${r.pf}-${r.pc}</td><td class="pts">${r.pts}</td></tr>`;
+    }
+    h += `</tbody></table></div><p class="leyenda">Ganar 3-0 o 3-1 da 3 puntos; ganar 3-2 da 2; perder 2-3 da 1. Toca un equipo para ver el suyo.</p></section>`;
+  }
+
+  h += `<section class="tarjeta"><div class="cab-cal"><h2>Partidos</h2><div class="conmuta">
+      <button type="button" data-ver="0" aria-pressed="${!verTodo}">Mi equipo</button>
+      <button type="button" data-ver="1" aria-pressed="${verTodo}">Todo el grupo</button></div></div>`;
+  if (verTodo) {
+    const jornadas = new Map();
+    for (const p of g.partidos) {
+      if (esDescanso(p)) continue;
+      if (!jornadas.has(p.jor)) jornadas.set(p.jor, []);
+      jornadas.get(p.jor).push(p);
+    }
+    const claves = [...jornadas.keys()].sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+    for (const j of claves) {
+      if (j) h += `<div class="jornada">Jornada ${esc(j)}</div>`;
+      h += jornadas.get(j).sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora)).map(p => partidoGrupo(p, yo, hoy)).join("");
+    }
+  } else {
+    h += mios.length ? mios.map(p => partidoMio(p, yo, hoy)).join("") : `<p class="aviso">No hay partidos de este equipo.</p>`;
+  }
+  h += `</section>`;
+  cont.innerHTML = h;
+}
+
+function celdaFecha(p) {
+  return `<div class="fecha"><b>${esc(fechaTxt(p.fecha))}</b>${esc(p.hora && p.hora !== "00:00" ? p.hora : "")}</div>`;
+}
+
+function partidoMio(p, yo, hoy) {
+  const casa = p.local === yo, rival = casa ? p.visit : p.local;
+  const jor = p.jor ? `<span class="chip">J${esc(p.jor)}</span>` : "";
+  if (esDescanso(p)) {
+    return `<div class="partido">${celdaFecha(p)}<div class="quien">${jor}Descansa</div><span></span></div>`;
+  }
+  let marc;
+  if (p.sl !== null) {
+    const mis = casa ? p.sl : p.sv, sus = casa ? p.sv : p.sl;
+    marc = `<span class="marcador ${mis > sus ? "g" : "p"}" title="${mis > sus ? "Victoria" : "Derrota"}">${mis}-${sus}</span>`;
+  } else {
+    marc = `<span class="marcador pend">${p.fecha && p.fecha < hoy ? "sin resultado" : "por jugar"}</span>`;
+  }
+  // Los parciales vienen como local-visitante: fuera de casa se giran para que cuadren con el marcador.
+  const parc = casa ? p.parciales : p.parciales.split(" · ").map(s => s.split("-").reverse().join("-")).join(" · ");
+  const detalle = p.sl !== null ? esc(parc) : mapa(p.campo);
+  return `<div class="partido ${p.fecha === hoy ? "hoy" : ""}">${celdaFecha(p)}
+    <div class="quien">${jor}<span class="chip">${casa ? "Casa" : "Fuera"}</span>${esc(rival)}<small>${detalle}</small></div>${marc}</div>`;
+}
+
+function partidoGrupo(p, yo, hoy) {
+  const marc = p.sl !== null ? `<span class="marcador">${p.sl}-${p.sv}</span>`
+    : `<span class="marcador pend">${p.fecha && p.fecha < hoy ? "sin resultado" : "por jugar"}</span>`;
+  const n = e => `<span class="${e === yo ? "yo" : ""}">${esc(e)}</span>`;
+  return `<div class="partido ${p.fecha === hoy ? "hoy" : ""}">${celdaFecha(p)}
+    <div class="quien">${n(p.local)} – ${n(p.visit)}<small>${p.sl !== null ? esc(p.parciales) : mapa(p.campo)}</small></div>${marc}</div>`;
+}
+
+function buscar() {
+  const q = norm($("q").value.trim());
+  const res = $("res");
+  if (q.length < 2) { res.innerHTML = ""; return; }
+  const out = [];
+  for (const c of datos.competiciones) {
+    c.grupos.forEach((g, i) => {
+      for (const e of equiposDe(g)) {
+        if (norm(e).includes(q)) out.push({ c, g, i, e });
+      }
+    });
+  }
+  res.innerHTML = out.length
+    ? out.slice(0, 40).map(r => `<li><button type="button" data-c="${esc(r.c.slug)}" data-g="${r.i}" data-e="${esc(r.e)}">${esc(r.e)}
+        <small>${esc(titulo(r.c.nombre))} · ${esc(nombreGrupo(r.g))}</small></button></li>`).join("")
+    : `<li class="aviso">Ningún equipo con ese nombre.</li>`;
+}
+
+function leerHash(h) {
+  const p = new URLSearchParams((h || "").replace(/^#/, ""));
+  return p.get("c") ? elegir(p.get("c"), parseInt(p.get("g")) || 0, p.get("e") || "", false) : false;
+}
+
+sCat.addEventListener("change", () => { pintarCompeticiones(); sel = { c: "", g: -1, e: "" }; pintar(); });
+sComp.addEventListener("change", () => { pintarEquipos(); sel = { c: "", g: -1, e: "" }; pintar(); });
+sEq.addEventListener("change", () => {
+  if (!sEq.value) { sel.e = ""; pintar(); return; }
+  const i = sEq.value.indexOf("|");
+  elegir(sComp.value, parseInt(sEq.value.slice(0, i)), sEq.value.slice(i + 1));
+});
+$("q").addEventListener("input", buscar);
+$("res").addEventListener("click", ev => {
+  const b = ev.target.closest("button");
+  if (!b) return;
+  elegir(b.dataset.c, parseInt(b.dataset.g), b.dataset.e);
+  $("q").value = ""; $("res").innerHTML = "";
+  cont.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+cont.addEventListener("click", ev => {
+  const b = ev.target.closest("[data-ver]");
+  if (b) { verTodo = b.dataset.ver === "1"; pintar(); return; }
+  const tr = ev.target.closest("tr[data-eq]");
+  if (tr && tr.dataset.eq !== sel.e) { elegir(sel.c, sel.g, tr.dataset.eq); window.scrollTo({ top: 0, behavior: "smooth" }); }
+});
+window.addEventListener("hashchange", () => leerHash(location.hash));
+
+fetch("data/data.json", { cache: "no-cache" })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => {
+    datos = d;
+    const f = new Date(d.actualizado);
+    $("act").textContent = "Datos del " + f.toLocaleDateString("es-ES", { day: "numeric", month: "short" }) +
+      ", " + f.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+    pintarCategorias();
+    let guardado = "";
+    try { guardado = localStorage.getItem("voley-sel") || ""; } catch (_) {}
+    if (!leerHash(location.hash) && !leerHash(guardado)) pintar();
+  })
+  .catch(() => { cont.innerHTML = `<p class="aviso">No se han podido cargar los datos. Prueba a recargar la página.</p>`; });
+</script>
+</body>
+</html>

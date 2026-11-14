@@ -1,0 +1,36 @@
+name: Actualizar datos
+
+on:
+  schedule:
+    # Cada 2 horas de día (hora UTC). En fin de semana los resultados van entrando.
+    - cron: "17 6-22/2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: actualizar
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install beautifulsoup4
+      - run: python scraper/scrape.py
+      - name: Guardar cambios
+        run: |
+          if git diff --quiet -- data/data.json; then
+            echo "Sin cambios"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/data.json
+          git commit -m "Actualiza datos"
+          git push

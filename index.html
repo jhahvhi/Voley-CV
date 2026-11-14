@@ -39,7 +39,19 @@ select, input[type=search] { width: 100%; font: inherit; color: var(--texto); ba
   border: 1px solid var(--borde); border-radius: 10px; padding: 11px 12px; min-height: 46px; }
 select:disabled { opacity: .5; }
 select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
-.buscar { margin-top: 12px; position: relative; }
+.buscar { position: relative; }
+label.grande { font-size: 1.05rem; color: var(--texto); font-weight: 700; margin-bottom: 8px; }
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--suave); font-size: .88rem; padding: 4px 0; }
+details .campos { margin-top: 10px; }
+.logo { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px;
+  border-radius: 50%; vertical-align: middle; margin-right: 7px; object-fit: contain; }
+span.logo { color: #fff; font-size: .62rem; font-weight: 800; letter-spacing: -.02em; }
+.logo.xl { width: 44px; height: 44px; margin-right: 10px; }
+span.logo.xl { font-size: 1rem; }
+.resultados .fila { display: flex; align-items: center; }
+.resultados .fila > div { min-width: 0; }
+.nombre { display: flex; align-items: center; margin: 3px 0 2px; }
 .resultados { list-style: none; margin: 6px 0 0; padding: 0; max-height: 300px; overflow: auto; }
 .resultados button { display: block; width: 100%; text-align: left; font: inherit; color: var(--texto); background: none;
   border: 0; border-top: 1px solid var(--borde); padding: 10px 4px; cursor: pointer; }
@@ -52,14 +64,14 @@ select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px s
   display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
 .puesto b { font-size: 2.3rem; font-weight: 800; }
 .puesto span { font-size: .75rem; margin-top: 4px; opacity: .9; }
-.resumen h3 { margin: 0 0 2px; font-size: 1.2rem; line-height: 1.2; overflow-wrap: anywhere; }
+.resumen h3 { display: flex; align-items: center; margin: 0 0 4px; font-size: 1.2rem; line-height: 1.2; overflow-wrap: anywhere; }
 .resumen p { margin: 0; color: var(--suave); font-size: .9rem; }
 .cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; text-align: center; }
 .cifras div { background: var(--fondo); border-radius: 10px; padding: 8px 4px; }
 .cifras b { display: block; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 .cifras span { font-size: .72rem; color: var(--suave); }
 .proximo { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--borde); }
-.proximo strong { display: block; font-size: 1.05rem; overflow-wrap: anywhere; }
+.proximo strong { display: flex; font-size: 1.05rem; overflow-wrap: anywhere; }
 .proximo .cuando { color: var(--acento); font-weight: 700; }
 .proximo a, .partido a { color: var(--suave); }
 
@@ -69,7 +81,7 @@ table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nu
 th, td { padding: 9px 6px; text-align: center; border-bottom: 1px solid var(--borde); white-space: nowrap; }
 th { font-size: .72rem; color: var(--suave); font-weight: 700; }
 td.eq, th.eq { text-align: left; white-space: normal; width: 99%; overflow-wrap: anywhere; }
-td.eq img { width: 20px; height: 20px; object-fit: contain; vertical-align: -4px; margin-right: 6px; }
+td.eq > div { display: flex; align-items: center; }
 td.pts { font-weight: 800; }
 tr.mio td { background: var(--acento-suave); font-weight: 700; }
 tr.mio td:first-child { box-shadow: inset 4px 0 0 var(--acento); }
@@ -112,16 +124,19 @@ footer a { color: inherit; }
   </header>
 
   <section class="tarjeta" aria-label="Elegir equipo">
-    <div class="campos">
-      <div><label for="s-cat">Categoría</label><select id="s-cat"></select></div>
-      <div><label for="s-comp">Competición</label><select id="s-comp" disabled></select></div>
-      <div><label for="s-eq">Equipo</label><select id="s-eq" disabled></select></div>
-    </div>
     <div class="buscar">
-      <label for="q">…o busca el equipo por su nombre</label>
-      <input type="search" id="q" placeholder="Por ejemplo: Paterna" autocomplete="off">
+      <label for="q" class="grande">¿Qué equipo buscas?</label>
+      <input type="search" id="q" placeholder="Escribe el nombre del club o colegio: Jesuitas, Paterna…" autocomplete="off">
       <ul class="resultados" id="res"></ul>
     </div>
+    <details id="porlista">
+      <summary>No sé el nombre: elegir por edad y competición</summary>
+      <div class="campos">
+        <div><label for="s-cat">Edad</label><select id="s-cat"></select></div>
+        <div><label for="s-comp">Competición</label><select id="s-comp" disabled></select></div>
+        <div><label for="s-eq">Equipo</label><select id="s-eq" disabled></select></div>
+      </div>
+    </details>
   </section>
 
   <div id="contenido"><p class="aviso" id="aviso">Cargando datos…</p></div>
@@ -156,7 +171,47 @@ function fechaTxt(iso, largo) {
     : { weekday: "short", day: "numeric", month: "short" });
 }
 const horaTxt = h => (!h || h === "00:00") ? "hora por confirmar" : h + " h";
-const escudo = f => (f && f !== "noescudo.png") ? `<img src="${ESCUDOS}${esc(f)}" alt="" loading="lazy" onerror="this.remove()">` : "";
+// Insignia con iniciales para los equipos de los que la federación no tiene escudo.
+const PALABRAS_VACIAS = /^(CV|CD|C|V|CLUB|VOLEIBOL|VOLEY|COLEGIO|IES|DE|DEL|LA|EL|LOS|LAS|S|SAN|EEMM)$/;
+function insignia(nombre, xl) {
+  const palabras = norm(nombre).toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  const utiles = palabras.filter(w => !PALABRAS_VACIAS.test(w));
+  const base = utiles.length ? utiles : palabras;
+  const ini = base.length > 1 ? base[0][0] + base[1][0] : (base[0] || "?").slice(0, 2);
+  // El color sale de la primera palabra con peso, para que todos los equipos de un club compartan color.
+  let n = 0;
+  for (const ch of (base[0] || "")) n = (n * 31 + ch.charCodeAt(0)) % 360;
+  return `<span class="logo${xl ? " xl" : ""}" style="background:hsl(${n} 55% 42%)" aria-hidden="true">${esc(ini)}</span>`;
+}
+function logo(f, nombre, xl) {
+  if (!f || f === "noescudo.png") return insignia(nombre, xl);
+  return `<img class="logo${xl ? " xl" : ""}" src="${ESCUDOS}${esc(f)}" alt="" loading="lazy" data-n="${esc(nombre)}" data-xl="${xl ? 1 : ""}">`;
+}
+// Si un escudo no carga, se cambia por la insignia de iniciales.
+document.addEventListener("error", ev => {
+  const i = ev.target;
+  if (i.tagName === "IMG" && i.classList.contains("logo")) i.outerHTML = insignia(i.dataset.n, i.dataset.xl);
+}, true);
+
+// Escudo de cada equipo dentro de un grupo (de la clasificación o de sus partidos).
+const cacheEscudos = new WeakMap();
+function escudosDe(g) {
+  if (!cacheEscudos.has(g)) {
+    const m = {};
+    g.partidos.forEach(p => { m[p.local] = m[p.local] || p.el; m[p.visit] = m[p.visit] || p.ev; });
+    g.clasificacion.forEach(r => { if (r.escudo) m[r.equipo] = r.escudo; });
+    cacheEscudos.set(g, m);
+  }
+  return cacheEscudos.get(g);
+}
+
+const nombreComp = c => titulo(c.nombre.replace(/^JDM\b/, "Juegos Municipales").replace(/\bVAL\b/, "Valencia"));
+// Años de nacimiento de cada categoría, según el año en que empieza la temporada.
+const EDADES = { "Alevín": [11, 10], "Infantil": [13, 12], "Cadete": [15, 14], "Juvenil": [17, 16], "Junior": [20, 18] };
+function annos(cat) {
+  const ini = Math.max(...datos.competiciones.map(c => parseInt(c.temporada) || 0));
+  return EDADES[cat] && ini ? ` (${ini - EDADES[cat][0]}-${ini - EDADES[cat][1]})` : "";
+}
 const mapa = campo => campo ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(campo)}" target="_blank" rel="noopener">📍 ${esc(campo)}</a>` : "";
 
 function opciones(select, lista, vacio) {
@@ -167,12 +222,12 @@ function opciones(select, lista, vacio) {
 function pintarCategorias() {
   const cats = [...new Set(datos.competiciones.map(c => c.categoria))]
     .sort((a, b) => ORDEN_CAT.indexOf(a) - ORDEN_CAT.indexOf(b));
-  opciones(sCat, cats.map(c => `<option>${esc(c)}</option>`).join(""), "Elige edad…");
+  opciones(sCat, cats.map(c => `<option value="${esc(c)}">${esc(c + annos(c))}</option>`).join(""), "Elige edad…");
 }
 
 function pintarCompeticiones() {
   const lista = datos.competiciones.filter(c => c.categoria === sCat.value);
-  opciones(sComp, lista.map(c => `<option value="${esc(c.slug)}">${esc(titulo(c.nombre))}</option>`).join(""), "Elige competición…");
+  opciones(sComp, lista.map(c => `<option value="${esc(c.slug)}">${esc(nombreComp(c))}</option>`).join(""), "Elige competición…");
   sComp.disabled = !sCat.value;
   sEq.innerHTML = ""; sEq.disabled = true;
 }
@@ -190,13 +245,15 @@ function pintarEquipos() {
   const varios = c.grupos.length > 1;
   const html = c.grupos.map((g, i) => {
     const ops = equiposDe(g).map(e => `<option value="${i}|${esc(e)}">${esc(e)}</option>`).join("");
-    return varios ? `<optgroup label="${esc(nombreGrupo(g))}">${ops}</optgroup>` : ops;
+    return varios ? `<optgroup label="${esc(nombreGrupo(g, c))}">${ops}</optgroup>` : ops;
   }).join("");
   opciones(sEq, html, "Elige equipo…");
 }
 
-function nombreGrupo(g) {
-  const partes = [g.fase, g.grupo].filter(x => x && !/^[ÚU]NICO$/i.test(x));
+function nombreGrupo(g, c) {
+  // La fase solo se menciona si la competición tiene más de una.
+  const unaFase = new Set(c.grupos.map(x => x.fase)).size < 2;
+  const partes = [unaFase ? "" : g.fase, g.grupo].filter(x => x && !/^[ÚU]NICO$/i.test(x));
   return partes.length ? titulo(partes.join(" · ")) : "Grupo único";
 }
 
@@ -220,7 +277,7 @@ function pintar() {
   const c = datos.competiciones.find(x => x.slug === sel.c);
   const g = c && c.grupos[sel.g];
   if (!g || !sel.e) { cont.innerHTML = `<p class="aviso">Elige un equipo para ver cómo va.</p>`; return; }
-  const yo = sel.e, hoy = hoyISO();
+  const yo = sel.e, hoy = hoyISO(), esc_ = escudosDe(g);
   const fila = g.clasificacion.find(r => r.equipo === yo);
   const mios = g.partidos.filter(p => p.local === yo || p.visit === yo)
     .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
@@ -228,7 +285,7 @@ function pintar() {
 
   let h = `<section class="tarjeta"><div class="resumen">`;
   if (fila) h += `<div class="puesto"><b>${fila.pos}º</b><span>de ${g.clasificacion.length}</span></div>`;
-  h += `<div><h3>${esc(yo)}</h3><p>${esc(titulo(c.nombre))}<br>${esc(nombreGrupo(g))}${c.temporada ? " · " + esc(c.temporada) : ""}</p></div></div>`;
+  h += `<div><h3>${logo(esc_[yo], yo, true)}<span>${esc(yo)}</span></h3><p>${esc(nombreComp(c))}<br>${esc(nombreGrupo(g, c))}${c.temporada ? " · temporada " + esc(c.temporada) : ""}</p></div></div>`;
   if (fila) {
     h += `<div class="cifras">
       <div><b>${fila.pts}</b><span>puntos</span></div>
@@ -241,18 +298,18 @@ function pintar() {
     const cuando = prox.fecha === hoy ? "Hoy" : fechaTxt(prox.fecha, true);
     h += `<div class="proximo"><h2>Próximo partido</h2>
       <span class="cuando">${esc(cuando)} · ${esc(horaTxt(prox.hora))}</span>
-      <strong>${casa ? "En casa contra" : "Fuera, contra"} ${esc(rival)}</strong>${mapa(prox.campo)}</div>`;
+      <strong class="nombre">${logo(esc_[rival], rival)}<span>${casa ? "En casa contra" : "Fuera, contra"} ${esc(rival)}</span></strong>${mapa(prox.campo)}</div>`;
   } else if (mios.length) {
     h += `<div class="proximo"><h2>Próximo partido</h2><span>No hay más partidos programados.</span></div>`;
   }
   h += `</section>`;
 
   if (g.clasificacion.length) {
-    h += `<section class="tarjeta"><h2>Clasificación · ${esc(nombreGrupo(g))}</h2><div class="tabla-scroll"><table>
+    h += `<section class="tarjeta"><h2>Clasificación · ${esc(nombreGrupo(g, c))}</h2><div class="tabla-scroll"><table>
       <thead><tr><th></th><th class="eq">Equipo</th><th title="Partidos jugados">PJ</th><th title="Ganados">G</th><th title="Perdidos">P</th>
       <th title="Sets a favor y en contra">Sets</th><th class="extra" title="Puntos de juego a favor y en contra">Tantos</th><th title="Puntos">Pts</th></tr></thead><tbody>`;
     for (const r of g.clasificacion) {
-      h += `<tr data-eq="${esc(r.equipo)}" class="${r.equipo === yo ? "mio" : ""}"><td>${r.pos}</td><td class="eq">${escudo(r.escudo)}${esc(r.equipo)}</td>
+      h += `<tr data-eq="${esc(r.equipo)}" class="${r.equipo === yo ? "mio" : ""}"><td>${r.pos}</td><td class="eq"><div>${logo(r.escudo, r.equipo)}<span>${esc(r.equipo)}</span></div></td>
         <td>${r.pj}</td><td>${r.pg3 + r.pg2}</td><td>${r.pp1 + r.pp0}</td><td>${r.sf}-${r.sc}</td><td class="extra">${r.pf}-${r.pc}</td><td class="pts">${r.pts}</td></tr>`;
     }
     h += `</tbody></table></div><p class="leyenda">Ganar 3-0 o 3-1 da 3 puntos; ganar 3-2 da 2; perder 2-3 da 1. Toca un equipo para ver el suyo.</p></section>`;
@@ -301,33 +358,53 @@ function partidoMio(p, yo, hoy) {
   const parc = casa ? p.parciales : p.parciales.split(" · ").map(s => s.split("-").reverse().join("-")).join(" · ");
   const detalle = p.sl !== null ? esc(parc) : mapa(p.campo);
   return `<div class="partido ${p.fecha === hoy ? "hoy" : ""}">${celdaFecha(p)}
-    <div class="quien">${jor}<span class="chip">${casa ? "Casa" : "Fuera"}</span>${esc(rival)}<small>${detalle}</small></div>${marc}</div>`;
+    <div class="quien"><div>${jor}<span class="chip">${casa ? "Casa" : "Fuera"}</span></div><div class="nombre">${logo(casa ? p.ev : p.el, rival)}<span>${esc(rival)}</span></div><small>${detalle}</small></div>${marc}</div>`;
 }
 
 function partidoGrupo(p, yo, hoy) {
   const marc = p.sl !== null ? `<span class="marcador">${p.sl}-${p.sv}</span>`
     : `<span class="marcador pend">${p.fecha && p.fecha < hoy ? "sin resultado" : "por jugar"}</span>`;
-  const n = e => `<span class="${e === yo ? "yo" : ""}">${esc(e)}</span>`;
+  const n = (e, f) => `${logo(f, e)}<span class="${e === yo ? "yo" : ""}">${esc(e)}</span>`;
   return `<div class="partido ${p.fecha === hoy ? "hoy" : ""}">${celdaFecha(p)}
-    <div class="quien">${n(p.local)} – ${n(p.visit)}<small>${p.sl !== null ? esc(p.parciales) : mapa(p.campo)}</small></div>${marc}</div>`;
+    <div class="quien">${n(p.local, p.el)} – ${n(p.visit, p.ev)}<small>${p.sl !== null ? esc(p.parciales) : mapa(p.campo)}</small></div>${marc}</div>`;
+}
+
+// Pabellón donde un equipo juega más veces como local (suele llevar el nombre del colegio).
+function casaDe(g, e) {
+  const veces = {};
+  let mejor = "";
+  for (const p of g.partidos) {
+    if (p.local !== e || !p.campo) continue;
+    veces[p.campo] = (veces[p.campo] || 0) + 1;
+    if (!mejor || veces[p.campo] > veces[mejor]) mejor = p.campo;
+  }
+  return mejor;
 }
 
 function buscar() {
-  const q = norm($("q").value.trim());
+  // Por palabras sueltas: "san jose jesuitas cadete" encuentra "JESUITAS CADETE AZUL".
+  const palabras = norm($("q").value).split(/[^a-z0-9]+/)
+    .filter(w => w.length >= 3 && !/^(san|sant|santa|escuelas?|colegio|club|voley|voleibol|equipo|del|los|las)$/.test(w));
   const res = $("res");
-  if (q.length < 2) { res.innerHTML = ""; return; }
+  if (!palabras.length) { res.innerHTML = ""; return; }
   const out = [];
   for (const c of datos.competiciones) {
     c.grupos.forEach((g, i) => {
       for (const e of equiposDe(g)) {
-        if (norm(e).includes(q)) out.push({ c, g, i, e });
+        // Se busca en el nombre (cuenta doble) y, para afinar, en categoría, grupo y pabellón de casa.
+        const ne = norm(e), extra = norm(c.categoria + " " + c.nombre + " " + g.grupo + " " + casaDe(g, e));
+        if (!palabras.some(w => ne.includes(w))) continue;
+        const n = palabras.reduce((s, w) => s + (ne.includes(w) ? 2 : extra.includes(w) ? 1 : 0), 0);
+        out.push({ c, g, i, e, n });
       }
     });
   }
+  out.sort((a, b) => b.n - a.n || ORDEN_CAT.indexOf(a.c.categoria) - ORDEN_CAT.indexOf(b.c.categoria) || a.e.localeCompare(b.e, "es"));
   res.innerHTML = out.length
-    ? out.slice(0, 40).map(r => `<li><button type="button" data-c="${esc(r.c.slug)}" data-g="${r.i}" data-e="${esc(r.e)}">${esc(r.e)}
-        <small>${esc(titulo(r.c.nombre))} · ${esc(nombreGrupo(r.g))}</small></button></li>`).join("")
-    : `<li class="aviso">Ningún equipo con ese nombre.</li>`;
+    ? out.slice(0, 40).map(r => `<li><button type="button" data-c="${esc(r.c.slug)}" data-g="${r.i}" data-e="${esc(r.e)}">
+        <span class="fila">${logo(escudosDe(r.g)[r.e], r.e)}<div>${esc(r.e)}
+        <small>${esc(r.c.categoria + annos(r.c.categoria))} · ${esc(nombreComp(r.c))} · ${esc(nombreGrupo(r.g, r.c))}</small></div></span></button></li>`).join("")
+    : `<li class="aviso">No encuentro ningún equipo con ese nombre. Prueba con una sola palabra.</li>`;
 }
 
 function leerHash(h) {
@@ -368,6 +445,9 @@ fetch("data/data.json", { cache: "no-cache" })
     pintarCategorias();
     let guardado = "";
     try { guardado = localStorage.getItem("voley-sel") || ""; } catch (_) {}
+    // ?q=texto abre la página con esa búsqueda ya hecha.
+    const q = new URLSearchParams(location.search).get("q");
+    if (q) { $("q").value = q; buscar(); pintar(); return; }
     if (!leerHash(location.hash) && !leerHash(guardado)) pintar();
   })
   .catch(() => { cont.innerHTML = `<p class="aviso">No se han podido cargar los datos. Prueba a recargar la página.</p>`; });

@@ -208,7 +208,7 @@ dialog li { margin-bottom: 8px; }
   <p>Si tu equipo sale con un círculo de iniciales es porque la federación no tiene su escudo. Mándalo y lo añado:</p>
   <ol>
     <li>Pulsa el botón azul de abajo. Se abre una página de GitHub; si no tienes cuenta te pedirá crear una (es gratis).</li>
-    <li>En <b>el título</b> escribe <b>«Añadir logo»</b> y el <b>nombre del equipo</b> tal como sale aquí.<span id="logo-ya"></span></li>
+    <li>En <b>el título</b> escribe <b>«Añadir logo»</b> y el <b>nombre del equipo</b> tal como sale aquí.</li>
     <li><b>Arrastra la imagen</b> del logo al cuadro grande de texto (o pégala). Mejor en PNG y cuadrada.</li>
     <li>Pulsa el botón verde <b>«Create»</b> para enviarlo.</li>
   </ol>
@@ -591,7 +591,6 @@ function repoGithub() {
 
 $("b-logo").addEventListener("click", () => {
   const repo = repoGithub(), equipo = sel.e || "";
-  $("logo-ya").textContent = equipo ? ` Para ${equipo} ya te lo dejo escrito.` : "";
   const url = `https://github.com/${repo}/issues/new?` + new URLSearchParams({
     title: "Añadir logo: " + (equipo || "(nombre del equipo)"),
     body: "Equipo: " + equipo + "\n¿Hay más equipos del mismo club? \n\nArrastra aquí la imagen del logo:\n",

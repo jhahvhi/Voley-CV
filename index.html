@@ -58,6 +58,28 @@ span.logo.xl { font-size: 1rem; }
 .resultados button:hover { background: var(--acento-suave); }
 .resultados small { display: block; color: var(--suave); }
 
+/* Dentro de un equipo, buscador y favoritos se esconden y se abren como paneles desde los botones flotantes. */
+h1 a { color: inherit; text-decoration: none; }
+.cerrar { display: none; }
+.flotantes, #velo { display: none; }
+body:not(.en-equipo) #favs.vacio { display: none; }
+body.en-equipo main { padding-bottom: 150px; }
+body.en-equipo .panel { display: none; }
+body.en-equipo .flotantes { display: flex; flex-direction: column; gap: 12px; position: fixed; z-index: 10;
+  right: max(14px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); }
+.flotantes button { width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 1.35rem; line-height: 1; background: var(--acento); color: var(--sobre-acento);
+  box-shadow: 0 4px 14px rgb(0 0 0 / .3); }
+#b-favs { background: var(--tarjeta); color: #eab308; border: 1px solid var(--borde); }
+body.ver-buscar #velo, body.ver-favs #velo { display: block; position: fixed; inset: 0; z-index: 20; background: rgb(0 0 0 / .5); }
+body.ver-buscar #buscador, body.ver-favs #favs { display: block; position: fixed; z-index: 30; left: 0; right: 0; bottom: 0;
+  width: 100%; max-width: 760px; margin: 0 auto; max-height: 85vh; max-height: 85dvh; overflow: auto;
+  border-radius: 18px 18px 0 0; border-bottom: 0; padding-bottom: max(16px, env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 30px rgb(0 0 0 / .3); }
+body.ver-buscar .flotantes, body.ver-favs .flotantes { display: none; }
+body.en-equipo .panel .cerrar { display: block; float: right; margin: -8px -8px 0 0; }
+body.ver-buscar .resultados { max-height: none; }
+
 /* Favoritos */
 .fav { display: flex; align-items: center; gap: 4px; border-top: 1px solid var(--borde); }
 .fav:first-of-type { border-top: 0; }
@@ -136,13 +158,14 @@ footer a { color: inherit; }
 <body>
 <main>
   <header>
-    <h1>🏐 Vóley CV</h1>
+    <h1><a href="#" title="Volver al inicio">🏐 Vóley CV</a></h1>
     <span class="act" id="act"></span>
   </header>
 
-  <section class="tarjeta oculto" id="favs" aria-label="Mis equipos"></section>
+  <section class="tarjeta panel vacio" id="favs" aria-label="Mis equipos"></section>
 
-  <section class="tarjeta" aria-label="Elegir equipo">
+  <section class="tarjeta panel" id="buscador" aria-label="Buscar equipo">
+    <button type="button" class="icono cerrar" data-cerrar aria-label="Cerrar">✕</button>
     <div class="buscar">
       <label for="q" class="grande">¿Qué equipo buscas?</label>
       <input type="search" id="q" placeholder="Escribe el nombre del club o colegio: Jesuitas, Paterna…" autocomplete="off">
@@ -165,6 +188,14 @@ footer a { color: inherit; }
     Página no oficial; ante la duda, manda la web de la federación.
   </footer>
 </main>
+
+<div id="velo"></div>
+<nav class="flotantes" aria-label="Cambiar de equipo">
+  <button type="button" id="b-favs" title="Mis equipos" aria-label="Mis equipos">★</button>
+  <button type="button" id="b-buscar" title="Buscar equipo" aria-label="Buscar equipo">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+  </button>
+</nav>
 
 <script>
 "use strict";
@@ -291,9 +322,13 @@ function grupoDe(c, g, e) {
 
 function pintarFavs() {
   const caja = $("favs");
-  caja.classList.toggle("oculto", !favs.length);
-  if (!favs.length) { caja.innerHTML = ""; return; }
-  caja.innerHTML = `<h2>Mis equipos</h2>` + favs.map((f, i) => {
+  caja.classList.toggle("vacio", !favs.length);
+  const cab = `<button type="button" class="icono cerrar" data-cerrar aria-label="Cerrar">✕</button><h2>Mis equipos</h2>`;
+  if (!favs.length) {
+    caja.innerHTML = cab + `<p class="aviso">Aún no has guardado ningún equipo.<br>Pulsa la estrella ☆ de un equipo para tenerlo aquí.</p>`;
+    return;
+  }
+  caja.innerHTML = cab + favs.map((f, i) => {
     const c = datos.competiciones.find(x => x.slug === f.c);
     const g = c && c.grupos[grupoDe(c, f.g, f.e)];
     const fila = g && g.clasificacion.find(r => r.equipo === f.e);
@@ -325,6 +360,7 @@ function alternarFav() {
 $("favs").addEventListener("click", ev => {
   const b = ev.target.closest("button");
   if (!b) return;
+  if (b.dataset.cerrar !== undefined) { cerrarPanel(); return; }
   if (b.dataset.fav !== undefined) {
     const f = favs[b.dataset.fav], c = datos.competiciones.find(x => x.slug === f.c);
     if (c) elegir(f.c, grupoDe(c, f.g, f.e), f.e);
@@ -343,19 +379,20 @@ function elegir(slug, g, e, guardar = true) {
   sCat.value = c.categoria; pintarCompeticiones();
   sComp.value = slug; pintarEquipos();
   sEq.value = `${g}|${e}`;
-  if (guardar) {
-    const h = "#" + new URLSearchParams({ c: slug, g, e });
-    history.replaceState(null, "", h);
-    try { localStorage.setItem("voley-sel", h); } catch (_) {}
-  }
+  // Cada equipo abierto es una entrada del historial: el botón Atrás vuelve al anterior o al inicio.
+  const h = "#" + new URLSearchParams({ c: slug, g, e });
+  if (guardar && location.hash !== h) history.pushState(null, "", h);
+  cerrarPanel();
   pintar(); pintarFavs();
+  window.scrollTo(0, 0);
   return true;
 }
 
 function pintar() {
   const c = datos.competiciones.find(x => x.slug === sel.c);
   const g = c && c.grupos[sel.g];
-  if (!g || !sel.e) { cont.innerHTML = `<p class="aviso">Elige un equipo para ver cómo va.</p>`; return; }
+  document.body.classList.toggle("en-equipo", !!(g && sel.e));
+  if (!g || !sel.e) { cont.innerHTML = ""; return; }
   const yo = sel.e, hoy = hoyISO(), esc_ = escudosDe(g), fav = favDe(sel.c, yo);
   const fila = g.clasificacion.find(r => r.equipo === yo);
   const mios = g.partidos.filter(p => p.local === yo || p.visit === yo)
@@ -489,15 +526,38 @@ function buscar() {
     : `<li class="aviso">No encuentro ningún equipo con ese nombre. Prueba con una sola palabra.</li>`;
 }
 
+function abrirPanel(cual) {
+  document.body.classList.remove("ver-buscar", "ver-favs");
+  document.body.classList.add("ver-" + cual);
+  if (cual === "buscar") $("q").focus();
+}
+function cerrarPanel() { document.body.classList.remove("ver-buscar", "ver-favs"); }
+
+// Pantalla de inicio: sin equipo, solo buscador y favoritos.
+function irInicio() {
+  sel = { c: "", g: -1, e: "" };
+  cerrarPanel();
+  sCat.value = ""; pintarCompeticiones();
+  pintar(); pintarFavs();
+}
+// La dirección manda: con equipo en el # se abre ese equipo; sin él, el inicio.
+function sincronizar() { if (!leerHash(location.hash)) irInicio(); }
+
+$("b-buscar").addEventListener("click", () => abrirPanel("buscar"));
+$("b-favs").addEventListener("click", () => abrirPanel("favs"));
+$("velo").addEventListener("click", cerrarPanel);
+$("buscador").addEventListener("click", ev => { if (ev.target.closest("[data-cerrar]")) cerrarPanel(); });
+document.addEventListener("keydown", ev => { if (ev.key === "Escape") cerrarPanel(); });
+
 function leerHash(h) {
   const p = new URLSearchParams((h || "").replace(/^#/, ""));
   return p.get("c") ? elegir(p.get("c"), parseInt(p.get("g")) || 0, p.get("e") || "", false) : false;
 }
 
-sCat.addEventListener("change", () => { pintarCompeticiones(); sel = { c: "", g: -1, e: "" }; pintar(); });
-sComp.addEventListener("change", () => { pintarEquipos(); sel = { c: "", g: -1, e: "" }; pintar(); });
+sCat.addEventListener("change", pintarCompeticiones);
+sComp.addEventListener("change", pintarEquipos);
 sEq.addEventListener("change", () => {
-  if (!sEq.value) { sel.e = ""; pintar(); return; }
+  if (!sEq.value) return;
   const i = sEq.value.indexOf("|");
   elegir(sComp.value, parseInt(sEq.value.slice(0, i)), sEq.value.slice(i + 1));
 });
@@ -507,7 +567,6 @@ $("res").addEventListener("click", ev => {
   if (!b) return;
   elegir(b.dataset.c, parseInt(b.dataset.g), b.dataset.e);
   $("q").value = ""; $("res").innerHTML = "";
-  cont.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 cont.addEventListener("click", ev => {
   if (ev.target.closest("[data-estrella]")) { alternarFav(); return; }
@@ -517,7 +576,8 @@ cont.addEventListener("click", ev => {
   const tr = ev.target.closest("tr[data-eq]");
   if (tr && tr.dataset.eq !== sel.e) { elegir(sel.c, sel.g, tr.dataset.eq); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
-window.addEventListener("hashchange", () => leerHash(location.hash));
+window.addEventListener("hashchange", sincronizar);
+window.addEventListener("popstate", sincronizar);
 
 fetch("data/data.json", { cache: "no-cache" })
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -527,12 +587,10 @@ fetch("data/data.json", { cache: "no-cache" })
     $("act").textContent = "Datos del " + f.toLocaleDateString("es-ES", { day: "numeric", month: "short" }) +
       ", " + f.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
     pintarCategorias(); pintarFavs();
-    let guardado = "";
-    try { guardado = localStorage.getItem("voley-sel") || ""; } catch (_) {}
     // ?q=texto abre la página con esa búsqueda ya hecha.
     const q = new URLSearchParams(location.search).get("q");
     if (q) { $("q").value = q; buscar(); pintar(); return; }
-    if (!leerHash(location.hash) && !leerHash(guardado)) pintar();
+    sincronizar();
   })
   .catch(() => { cont.innerHTML = `<p class="aviso">No se han podido cargar los datos. Prueba a recargar la página.</p>`; });
 </script>

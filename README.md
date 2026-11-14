@@ -15,23 +15,40 @@ Comunidad Valenciana (fvbcv.com): puesto, clasificación del grupo y calendario.
     python3 scraper/scrape.py          # regenera data/data.json
     python3 -m http.server 8000        # abrir http://localhost:8000
 
-## Publicar en GitHub Pages
+## Logos de los equipos
 
-1. Crear un repositorio público vacío en GitHub y subir esto:
+Los escudos salen de la federación. Si un equipo no tiene, la página le pone un
+círculo con sus iniciales.
 
-       git remote add origin git@github.com:USUARIO/voley.git
-       git push -u origin main
+**¿Quieres que salga el logo de tu equipo?** No hace falta saber nada de
+programación:
 
-2. En el repositorio: Settings → Pages → Source: "Deploy from a branch",
-   rama `main`, carpeta `/ (root)`.
-3. Settings → Actions → General → Workflow permissions: "Read and write".
-4. Pestaña Actions → "Actualizar datos" → Run workflow, para comprobar que
-   la actualización automática funciona.
+1. Entra en la pestaña **Issues** de este repositorio y pulsa **New issue**
+   (hace falta una cuenta de GitHub, que es gratis). En la propia página hay un
+   enlace al pie, "¿Quieres que salga el logo de tu equipo?", que te lleva directo.
+2. En el título escribe **Añadir logo** y el **nombre del equipo** tal como sale
+   en la página.
+3. Arrastra la imagen del logo al cuadro de texto (mejor PNG y cuadrada).
+4. Pulsa el botón verde para enviarlo.
 
-GitHub desactiva las tareas programadas tras 60 días sin actividad en el
-repositorio (por ejemplo en verano); se reactivan desde la pestaña Actions.
+Para quien mantiene la página: guardar la imagen en `logos/` y añadir una regla
+en `logos/logos.json`:
+
+    {
+      "logo": "jesuitas_valencia.png",     archivo dentro de logos/
+      "club": "Jesuitas (Valencia)",       solo informativo
+      "empieza": "JESUITAS ",              el nombre del equipo empieza así...
+      "contiene": "...",                   ...o contiene esto (uno de los dos)
+      "sin": ["SERRA GROSSA"],             textos que lo descartan (otro club parecido)
+      "competicion": "jdm-"                opcional: solo en competiciones cuyo
+    }                                      identificador empieza así
+
+No distingue mayúsculas ni tildes. Una regla vale para todos los equipos del
+club (cadete, infantil...). Los logos propios mandan sobre los de la federación.
 
 ## Si la federación cambia su web
 
 El extractor depende del HTML de fvbcv.com. Si deja de encontrar datos, sale
 con error y no pisa el JSON publicado; habrá que ajustar `leer_competicion`.
+
+Porfi no la cambiéis :)

@@ -153,6 +153,18 @@ tr:last-child td { border-bottom: 0; }
 .aviso { color: var(--suave); text-align: center; padding: 22px 8px; }
 footer { color: var(--suave); font-size: .78rem; text-align: center; margin-top: 22px; }
 footer a { color: inherit; }
+.enlace { font: inherit; color: var(--acento); background: none; border: 0; padding: 8px 0; cursor: pointer; text-decoration: underline; }
+img.logo { background: #fff; border-radius: 4px; }
+dialog { color: var(--texto); background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 16px; padding: 20px;
+  width: calc(100% - 32px); max-width: 480px; max-height: 85vh; overflow: auto; }
+dialog::backdrop { background: rgb(0 0 0 / .5); }
+dialog h3 { margin: 0 30px 10px 0; font-size: 1.15rem; }
+dialog p, dialog ol { margin: 0 0 12px; font-size: .95rem; }
+dialog ol { padding-left: 22px; }
+dialog li { margin-bottom: 8px; }
+.cerrar-d { float: right; margin: -8px -8px 0 0; }
+.boton { display: block; text-align: center; background: var(--acento); color: var(--sobre-acento); font-weight: 700;
+  text-decoration: none; border-radius: 10px; padding: 13px; }
 </style>
 </head>
 <body>
@@ -186,8 +198,23 @@ footer a { color: inherit; }
   <footer>
     Datos de la <a href="https://fvbcv.com/competiciones/" rel="noopener">Federación de Voleibol de la Comunidad Valenciana</a>.
     Página no oficial; ante la duda, manda la web de la federación.
+    <br><button type="button" class="enlace" id="b-logo">¿Quieres que salga el logo de tu equipo?</button>
   </footer>
 </main>
+
+<dialog id="d-logo" aria-labelledby="t-logo">
+  <button type="button" class="icono cerrar-d" data-cerrar-d aria-label="Cerrar">✕</button>
+  <h3 id="t-logo">Poner el logo de tu equipo</h3>
+  <p>Si tu equipo sale con un círculo de iniciales es porque la federación no tiene su escudo. Mándalo y lo añado:</p>
+  <ol>
+    <li>Pulsa el botón azul de abajo. Se abre una página de GitHub; si no tienes cuenta te pedirá crear una (es gratis).</li>
+    <li>En <b>el título</b> escribe <b>«Añadir logo»</b> y el <b>nombre del equipo</b> tal como sale aquí.<span id="logo-ya"></span></li>
+    <li><b>Arrastra la imagen</b> del logo al cuadro grande de texto (o pégala). Mejor en PNG y cuadrada.</li>
+    <li>Pulsa el botón verde <b>«Create»</b> para enviarlo.</li>
+  </ol>
+  <p>Si el club tiene varios equipos (cadete, infantil…), dilo en el mensaje y se lo pongo a todos.</p>
+  <p id="logo-enlace"></p>
+</dialog>
 
 <div id="velo"></div>
 <nav class="flotantes" aria-label="Cambiar de equipo">
@@ -200,6 +227,10 @@ footer a { color: inherit; }
 <script>
 "use strict";
 const ESCUDOS = "https://appweb.fvbcv.com/backend/escudos/30/";
+// Repositorio de GitHub ("usuario/repo") para el enlace de enviar logos. Vacío = se deduce de la dirección usuario.github.io/repo.
+const REPO_GITHUB = "";
+// Los logos propios (carpeta logos/) se marcan con este prefijo para distinguirlos de los de la federación.
+const PROPIO = "local:";
 const ORDEN_CAT = ["Alevín", "Infantil", "Cadete", "Juvenil", "Junior", "Senior", "Otras"];
 const $ = id => document.getElementById(id);
 const sCat = $("s-cat"), sComp = $("s-comp"), sEq = $("s-eq"), cont = $("contenido");
@@ -235,7 +266,8 @@ function insignia(nombre, xl) {
 }
 function logo(f, nombre, xl) {
   if (!f || f === "noescudo.png") return insignia(nombre, xl);
-  return `<img class="logo${xl ? " xl" : ""}" src="${ESCUDOS}${esc(f)}" alt="" loading="lazy" data-n="${esc(nombre)}" data-xl="${xl ? 1 : ""}">`;
+  const src = f.startsWith(PROPIO) ? "logos/" + f.slice(PROPIO.length) : ESCUDOS + f;
+  return `<img class="logo${xl ? " xl" : ""}" src="${esc(src)}" alt="" loading="lazy" data-n="${esc(nombre)}" data-xl="${xl ? 1 : ""}">`;
 }
 // Si un escudo no carga, se cambia por la insignia de iniciales.
 document.addEventListener("error", ev => {
@@ -526,6 +558,54 @@ function buscar() {
     : `<li class="aviso">No encuentro ningún equipo con ese nombre. Prueba con una sola palabra.</li>`;
 }
 
+// Aplica las reglas de logos/logos.json: cada regla da un logo a los equipos cuyo nombre encaja.
+//   empieza / contiene: texto que debe tener el nombre.   sin: textos que lo descartan (otro club de nombre parecido).
+//   competicion: opcional, principio del identificador de la competición (p. ej. "jdm-").
+function aplicarLogos(reglas) {
+  const n = s => norm(String(s || "")).toUpperCase();
+  const logoPara = (c, equipo) => {
+    const e = n(equipo);
+    for (const r of reglas) {
+      if (!r.logo || (!r.empieza && !r.contiene)) continue;
+      if (r.empieza && !e.startsWith(n(r.empieza))) continue;
+      if (r.contiene && !e.includes(n(r.contiene))) continue;
+      if ((r.sin || []).some(x => e.includes(n(x)))) continue;
+      if (r.competicion && !c.slug.startsWith(r.competicion)) continue;
+      return PROPIO + r.logo;
+    }
+    return "";
+  };
+  for (const c of datos.competiciones) {
+    for (const g of c.grupos) {
+      for (const r of g.clasificacion) r.escudo = logoPara(c, r.equipo) || r.escudo;
+      for (const p of g.partidos) { p.el = logoPara(c, p.local) || p.el; p.ev = logoPara(c, p.visit) || p.ev; }
+    }
+  }
+}
+
+function repoGithub() {
+  if (REPO_GITHUB) return REPO_GITHUB;
+  const m = location.hostname.match(/^(.+)\.github\.io$/), carpeta = location.pathname.split("/")[1];
+  return m && carpeta ? m[1] + "/" + carpeta : "";
+}
+
+$("b-logo").addEventListener("click", () => {
+  const repo = repoGithub(), equipo = sel.e || "";
+  $("logo-ya").textContent = equipo ? ` Para ${equipo} ya te lo dejo escrito.` : "";
+  const url = `https://github.com/${repo}/issues/new?` + new URLSearchParams({
+    title: "Añadir logo: " + (equipo || "(nombre del equipo)"),
+    body: "Equipo: " + equipo + "\n¿Hay más equipos del mismo club? \n\nArrastra aquí la imagen del logo:\n",
+  });
+  $("logo-enlace").innerHTML = repo
+    ? `<a class="boton" href="${esc(url)}" target="_blank" rel="noopener">Abrir la página para enviar el logo</a>`
+    : `El enlace para enviarlo aparecerá cuando la página esté publicada en GitHub.`;
+  $("d-logo").showModal();
+});
+$("d-logo").addEventListener("click", ev => {
+  // Se cierra con la ✕ o tocando fuera del cartel.
+  if (ev.target.closest("[data-cerrar-d]") || ev.target === $("d-logo")) $("d-logo").close();
+});
+
 function abrirPanel(cual) {
   document.body.classList.remove("ver-buscar", "ver-favs");
   document.body.classList.add("ver-" + cual);
@@ -579,8 +659,11 @@ cont.addEventListener("click", ev => {
 window.addEventListener("hashchange", sincronizar);
 window.addEventListener("popstate", sincronizar);
 
-fetch("data/data.json", { cache: "no-cache" })
-  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+const pedirJSON = url => fetch(url, { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+// Si logos.json falta o está mal escrito, la página sigue funcionando sin logos propios.
+const logosPropios = pedirJSON("logos/logos.json").catch(() => []);
+pedirJSON("data/data.json")
+  .then(d => logosPropios.then(reglas => { datos = d; if (Array.isArray(reglas)) aplicarLogos(reglas); return d; }))
   .then(d => {
     datos = d;
     const f = new Date(d.actualizado);

@@ -58,6 +58,23 @@ span.logo.xl { font-size: 1rem; }
 .resultados button:hover { background: var(--acento-suave); }
 .resultados small { display: block; color: var(--suave); }
 
+/* Favoritos */
+.fav { display: flex; align-items: center; gap: 4px; border-top: 1px solid var(--borde); }
+.fav:first-of-type { border-top: 0; }
+.fav .ir { flex: 1; min-width: 0; display: flex; align-items: center; text-align: left; font: inherit; color: var(--texto);
+  background: none; border: 0; padding: 9px 0; cursor: pointer; overflow-wrap: anywhere; }
+.fav .ir b { display: block; }
+.fav .ir small { display: block; color: var(--suave); font-size: .78rem; }
+.fav.activo .ir b { color: var(--acento); }
+.fav .pos { flex: none; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--suave); padding: 0 6px; }
+.icono { flex: none; font: inherit; font-size: 1.15rem; line-height: 1; background: none; border: 0; border-radius: 8px;
+  padding: 8px; cursor: pointer; color: var(--suave); }
+.icono:hover { background: var(--fondo); }
+.estrella { font-size: 1.6rem; margin-left: auto; align-self: flex-start; }
+.estrella[aria-pressed=true] { color: #eab308; }
+.resumen > div:not(.puesto) { flex: 1; min-width: 0; }
+.renombrar { font: inherit; font-size: .8rem; color: var(--acento); background: none; border: 0; padding: 4px 0 0; cursor: pointer; text-decoration: underline; }
+
 /* Resumen */
 .resumen { display: flex; gap: 16px; align-items: center; }
 .puesto { flex: none; width: 92px; height: 92px; border-radius: 50%; background: var(--acento); color: var(--sobre-acento);
@@ -122,6 +139,8 @@ footer a { color: inherit; }
     <h1>🏐 Vóley CV</h1>
     <span class="act" id="act"></span>
   </header>
+
+  <section class="tarjeta oculto" id="favs" aria-label="Mis equipos"></section>
 
   <section class="tarjeta" aria-label="Elegir equipo">
     <div class="buscar">
@@ -257,6 +276,66 @@ function nombreGrupo(g, c) {
   return partes.length ? titulo(partes.join(" · ")) : "Grupo único";
 }
 
+// Favoritos: se guardan en el almacenamiento local de este navegador.
+let favs = [];
+try { favs = JSON.parse(localStorage.getItem("voley-favs")) || []; } catch (_) {}
+const guardarFavs = () => { try { localStorage.setItem("voley-favs", JSON.stringify(favs)); } catch (_) {} };
+const favDe = (c, e) => favs.find(f => f.c === c && f.e === e);
+
+// Grupo actual de un equipo: el guardado si sigue valiendo; si no, se busca por nombre.
+function grupoDe(c, g, e) {
+  if (c.grupos[g] && equiposDe(c.grupos[g]).includes(e)) return g;
+  const i = c.grupos.findIndex(x => equiposDe(x).includes(e));
+  return i < 0 ? g : i;
+}
+
+function pintarFavs() {
+  const caja = $("favs");
+  caja.classList.toggle("oculto", !favs.length);
+  if (!favs.length) { caja.innerHTML = ""; return; }
+  caja.innerHTML = `<h2>Mis equipos</h2>` + favs.map((f, i) => {
+    const c = datos.competiciones.find(x => x.slug === f.c);
+    const g = c && c.grupos[grupoDe(c, f.g, f.e)];
+    const fila = g && g.clasificacion.find(r => r.equipo === f.e);
+    const donde = c ? `${c.categoria} · ${nombreGrupo(g, c)}` : "ya no aparece en la federación";
+    return `<div class="fav ${sel.c === f.c && sel.e === f.e ? "activo" : ""}">
+      <button type="button" class="ir" data-fav="${i}">${logo(g && escudosDe(g)[f.e], f.e)}
+        <span><b>${esc(f.nombre || f.e)}</b><small>${f.nombre ? esc(f.e) + " · " : ""}${esc(donde)}</small></span></button>
+      ${fila ? `<span class="pos" title="Puesto en la clasificación">${fila.pos}º</span>` : ""}
+      <button type="button" class="icono" data-nombre="${i}" title="Cambiar el nombre" aria-label="Cambiar el nombre de ${esc(f.nombre || f.e)}">✏️</button>
+      <button type="button" class="icono" data-quitar="${i}" title="Quitar de mis equipos" aria-label="Quitar ${esc(f.nombre || f.e)} de mis equipos">✕</button>
+    </div>`;
+  }).join("");
+}
+
+function renombrar(f) {
+  const n = prompt(`Nombre para ${f.e}\n(déjalo vacío para usar el nombre oficial)`, f.nombre || "");
+  if (n === null) return;
+  f.nombre = n.trim().slice(0, 40);
+  guardarFavs(); pintarFavs(); pintar();
+}
+
+function alternarFav() {
+  const f = favDe(sel.c, sel.e);
+  if (f) favs.splice(favs.indexOf(f), 1);
+  else favs.push({ c: sel.c, g: sel.g, e: sel.e, nombre: "" });
+  guardarFavs(); pintarFavs(); pintar();
+}
+
+$("favs").addEventListener("click", ev => {
+  const b = ev.target.closest("button");
+  if (!b) return;
+  if (b.dataset.fav !== undefined) {
+    const f = favs[b.dataset.fav], c = datos.competiciones.find(x => x.slug === f.c);
+    if (c) elegir(f.c, grupoDe(c, f.g, f.e), f.e);
+  } else if (b.dataset.nombre !== undefined) {
+    renombrar(favs[b.dataset.nombre]);
+  } else if (b.dataset.quitar !== undefined) {
+    favs.splice(b.dataset.quitar, 1);
+    guardarFavs(); pintarFavs(); pintar();
+  }
+});
+
 function elegir(slug, g, e, guardar = true) {
   const c = datos.competiciones.find(x => x.slug === slug);
   if (!c || !c.grupos[g]) return false;
@@ -269,7 +348,7 @@ function elegir(slug, g, e, guardar = true) {
     history.replaceState(null, "", h);
     try { localStorage.setItem("voley-sel", h); } catch (_) {}
   }
-  pintar();
+  pintar(); pintarFavs();
   return true;
 }
 
@@ -277,7 +356,7 @@ function pintar() {
   const c = datos.competiciones.find(x => x.slug === sel.c);
   const g = c && c.grupos[sel.g];
   if (!g || !sel.e) { cont.innerHTML = `<p class="aviso">Elige un equipo para ver cómo va.</p>`; return; }
-  const yo = sel.e, hoy = hoyISO(), esc_ = escudosDe(g);
+  const yo = sel.e, hoy = hoyISO(), esc_ = escudosDe(g), fav = favDe(sel.c, yo);
   const fila = g.clasificacion.find(r => r.equipo === yo);
   const mios = g.partidos.filter(p => p.local === yo || p.visit === yo)
     .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
@@ -285,7 +364,10 @@ function pintar() {
 
   let h = `<section class="tarjeta"><div class="resumen">`;
   if (fila) h += `<div class="puesto"><b>${fila.pos}º</b><span>de ${g.clasificacion.length}</span></div>`;
-  h += `<div><h3>${logo(esc_[yo], yo, true)}<span>${esc(yo)}</span></h3><p>${esc(nombreComp(c))}<br>${esc(nombreGrupo(g, c))}${c.temporada ? " · temporada " + esc(c.temporada) : ""}</p></div></div>`;
+  h += `<div><h3>${logo(esc_[yo], yo, true)}<span>${esc(fav && fav.nombre || yo)}</span></h3><p>${fav && fav.nombre ? esc(yo) + "<br>" : ""}${esc(nombreComp(c))}<br>${esc(nombreGrupo(g, c))}${c.temporada ? " · temporada " + esc(c.temporada) : ""}</p>
+    ${fav ? `<button type="button" class="renombrar" data-renombrar>${fav.nombre ? "Cambiar el nombre" : "Ponerle un nombre"}</button>` : ""}</div>
+    <button type="button" class="icono estrella" data-estrella aria-pressed="${!!fav}" title="${fav ? "Quitar de mis equipos" : "Guardar en mis equipos"}"
+      aria-label="${fav ? "Quitar de mis equipos" : "Guardar en mis equipos"}">${fav ? "★" : "☆"}</button></div>`;
   if (fila) {
     h += `<div class="cifras">
       <div><b>${fila.pts}</b><span>puntos</span></div>
@@ -428,6 +510,8 @@ $("res").addEventListener("click", ev => {
   cont.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 cont.addEventListener("click", ev => {
+  if (ev.target.closest("[data-estrella]")) { alternarFav(); return; }
+  if (ev.target.closest("[data-renombrar]")) { renombrar(favDe(sel.c, sel.e)); return; }
   const b = ev.target.closest("[data-ver]");
   if (b) { verTodo = b.dataset.ver === "1"; pintar(); return; }
   const tr = ev.target.closest("tr[data-eq]");
@@ -442,7 +526,7 @@ fetch("data/data.json", { cache: "no-cache" })
     const f = new Date(d.actualizado);
     $("act").textContent = "Datos del " + f.toLocaleDateString("es-ES", { day: "numeric", month: "short" }) +
       ", " + f.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
-    pintarCategorias();
+    pintarCategorias(); pintarFavs();
     let guardado = "";
     try { guardado = localStorage.getItem("voley-sel") || ""; } catch (_) {}
     // ?q=texto abre la página con esa búsqueda ya hecha.
